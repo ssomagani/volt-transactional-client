@@ -1,11 +1,18 @@
-package org.voltdb.client;
+package com.voltdb.client;
 
 import java.io.IOException;
 import java.util.UUID;
 
+import org.voltdb.client.Client2;
+import org.voltdb.client.Client2Config;
+import org.voltdb.client.ClientFactory;
+import org.voltdb.client.ClientResponse;
+import org.voltdb.client.ProcCallException;
+
 public class TransactionalClient {
 	
 	private Client2 client;
+	private String txnId;
 	
 	public TransactionalClient(Client2Config config) {
 		client = ClientFactory.createClient(config);
@@ -18,23 +25,21 @@ public class TransactionalClient {
 
 	public String startTransaction(String... storedProcs) throws IOException, ProcCallException {
 		UUID uuid = UUID.randomUUID();
-		client.callProcedureSync("client_txns.insert", uuid.toString(), 0, "");
-		return uuid.toString();
+		txnId = uuid.toString();
+		return txnId;
 	}
 	
-	public ClientResponse callProcedureSync(String txnId, int counter, String storedProc, Object... args) throws ProcCallException, IOException {
-		client.callProcedureSync("client_txns.insert", txnId, counter, "");
+	public ClientResponse callProcedureSync(String txnId, String storedProc, Object... args) 
+			throws ProcCallException, IOException {
 		ClientResponse resp = client.callProcedureSync(storedProc, args);
 		return resp;
-		
 	}
 	
-	public void rollback() {
-		
+	public void rollback() throws IOException, ProcCallException {
+		client.callProcedureSync("RollbackTxn", null);
 	}
 	
 	public void commit() {
 		
 	}
-
 }

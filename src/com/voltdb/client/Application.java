@@ -1,6 +1,10 @@
-package org.voltdb.client;
+package com.voltdb.client;
 
 import java.io.IOException;
+
+import org.voltdb.client.Client2Config;
+import org.voltdb.client.ClientResponse;
+import org.voltdb.client.ProcCallException;
 
 public class Application {
 
@@ -20,13 +24,11 @@ public class Application {
 		// ----- START TRANSACTION BOUNDARY -----------------------------------
 		try {
 			String clientTxnId = client.startTransaction();
-			int counter = 0;
 			
 			// business logic
-			response = client.callProcedureSync(clientTxnId, ++counter, "StoredProcA");
-			response = client.callProcedureSync(clientTxnId, ++counter, "StoredProcB");
+			response = client.callProcedureSync(clientTxnId, "test_proc");
 			
-			if(response.getAppStatus() == 0) {
+			if(response.getStatus() == ClientResponse.SUCCESS) {
 				client.commit();
 			} else {
 				client.rollback();

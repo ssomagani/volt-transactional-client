@@ -1,9 +1,7 @@
 
-create table client_txns (
+create table client_txn (
 	id varchar NOT NULL, 
-	index INTEGER NOT NULL, 
-	payload VARBINARY,
-	primary key (id, index)
+	creation_time TIMESTAMP NOT NULL,
+	op_table varchar,
+	primary key (id, creation_time)
 	);
- 
-create procedure StartClientTxn as insert into client_txns values (?, ?, ?);

@@ -1,4 +1,4 @@
-package org.voltdb.clienttxn;
+package com.voltdb.clienttxn;
 
 import org.voltdb.VoltCompoundProcedure;
 import org.voltdb.VoltTable;
