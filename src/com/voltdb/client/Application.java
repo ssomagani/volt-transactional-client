@@ -25,7 +25,6 @@ public class Application {
 		try {
 			String clientTxnId = client.startTransaction();
 			
-			// business logic
 			response = client.callProcedureSync(clientTxnId, "test_proc");
 			
 			if(response.getStatus() == ClientResponse.SUCCESS) {

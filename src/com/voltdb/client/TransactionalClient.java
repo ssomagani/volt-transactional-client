@@ -29,9 +29,21 @@ public class TransactionalClient {
 		return txnId;
 	}
 	
-	public ClientResponse callProcedureSync(String txnId, String storedProc, Object... args) 
+	public ClientResponse callProcedureSync(
+			String txnId, 
+			String insertUndoLogProc, 
+			String getUndoValsProc, 
+			String undoStoredProc, 
+			String storedProc, 
+			Object... args) 
 			throws ProcCallException, IOException {
-		ClientResponse resp = client.callProcedureSync(storedProc, args);
+		Object[] allArgs = new Object[args.length + 5];
+		allArgs[0] = txnId;
+		allArgs[1] = insertUndoLogProc;
+		allArgs[2] = getUndoValsProc;
+		allArgs[3] = undoStoredProc;
+		allArgs[4] = storedProc;
+		ClientResponse resp = client.callProcedureSync("RollbackableTxn", args);
 		return resp;
 	}
 	
