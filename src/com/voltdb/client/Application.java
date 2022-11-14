@@ -2,6 +2,8 @@ package com.voltdb.client;
 
 import java.io.IOException;
 
+import org.voltdb.VoltTable;
+import org.voltdb.VoltType;
 import org.voltdb.client.Client2Config;
 import org.voltdb.client.ClientResponse;
 import org.voltdb.client.ProcCallException;
@@ -23,9 +25,22 @@ public class Application {
 		
 		// ----- START TRANSACTION BOUNDARY -----------------------------------
 		try {
-			String clientTxnId = client.startTransaction();
+			String txnId = client.startTransaction();
 			
-			response = client.callProcedureSync(clientTxnId, "test_proc");
+			VoltTable getUndoValsProcArgs = new VoltTable(
+					new VoltTable.ColumnInfo("id", VoltType.INTEGER));
+			Object[] vals = {1};
+			getUndoValsProcArgs.addRow(vals);
+			
+			VoltTable procArgs = new VoltTable(
+					new VoltTable.ColumnInfo("name", VoltType.STRING),
+					new VoltTable.ColumnInfo("id", VoltType.INTEGER)
+					);
+			Object[] values = {"one", 1};
+			procArgs.addRow(values);
+			
+			response = client.callProcedureSync(txnId, "insert_undo_test", "test_select", 
+					"test_proc", "test_proc", getUndoValsProcArgs, procArgs);
 			
 			if(response.getStatus() == ClientResponse.SUCCESS) {
 				client.commit();

@@ -5,3 +5,7 @@ create table client_txn (
 	op_table varchar,
 	primary key (id, creation_time)
 	);
+
+create compound procedure from class com.voltdb.clienttxn.RollbackableTxn;
+
+create procedure GetRecords partition on table client_txn column id as select * from client_txn where id = ?;

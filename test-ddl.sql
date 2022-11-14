@@ -2,6 +2,13 @@
 create table test (id integer not null, name varchar(12) not null, primary key (id));
 partition table test on column id;
 
+create procedure test_proc partition on table test column id parameter 1 as update test set name = ? where id = ?;
+
+create procedure test_select partition on table test column id as select id, name from test where id = ?;
+
+--
+-- Undo Log
+--
 create table undo_test(
 	txn_id varchar not null,
 	creation_time timestamp not null, 
@@ -21,6 +28,4 @@ create procedure insert_undo_test
 create procedure delete_undo_test as delete from undo_test where txn_id = ?;
 
 create procedure get_undo_test as select * from undo_test where txn_id = ?;
-
-create procedure test_proc as update test set name = ? where id = ?;
 

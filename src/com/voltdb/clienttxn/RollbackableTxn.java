@@ -1,5 +1,6 @@
 package com.voltdb.clienttxn;
 
+import org.apache.log4j.Logger;
 import org.voltdb.VoltCompoundProcedure;
 import org.voltdb.VoltTable;
 import org.voltdb.client.ClientResponse;
@@ -9,7 +10,9 @@ public class RollbackableTxn extends VoltCompoundProcedure {
 	private VoltTable[] results;
 	private String txnId;
 	private String storedProc, getUndoValsProc, insertUndoLogProc, undoStoredProc;
-	private Object[] procArgs;
+	private VoltTable getUndoValsProcArgs, procArgs;
+	
+	static Logger logger = Logger.getLogger("PROCEDURE");
 
 	public VoltTable[] run(
 			String txnId,
@@ -17,13 +20,15 @@ public class RollbackableTxn extends VoltCompoundProcedure {
 			String getUndoValsProc, 
 			String undoStoredProc, 
 			String storedProc, 
-			Object...procArgs) {
+			VoltTable getUndoValsProcArgs,
+			VoltTable procArgs) {
 
 		this.txnId = txnId;
 		this.insertUndoLogProc = insertUndoLogProc;
 		this.getUndoValsProc = getUndoValsProc;
 		this.undoStoredProc = undoStoredProc;
 		this.storedProc = storedProc;
+		this.getUndoValsProcArgs = getUndoValsProcArgs;
 		this.procArgs = procArgs;
 
 		newStageList(this::callGetUndoValsProc)
@@ -36,47 +41,55 @@ public class RollbackableTxn extends VoltCompoundProcedure {
 	}
 
 	private void callGetUndoValsProc(ClientResponse[] resp) {
-		callProcedure(getUndoValsProc, procArgs);
+		if(getUndoValsProcArgs.advanceRow()) {
+			System.out.println(getUndoValsProcArgs.getRowObjects()[0]);
+			System.out.println(getUndoValsProc);
+			queueProcedureCall(getUndoValsProc, getUndoValsProcArgs.getRowObjects());
+		}
 	}
 
 	private void callInsertUndoLogProc(ClientResponse[] resp) {
 		VoltTable result = verifyAndGetTheResults(resp);
-		if(result.advanceRow()) {
-			Object[] args = new Object[result.getColumnCount() + 2];
-			args[0] = txnId;
-			args[1] = undoStoredProc;
-			for(int i=0; i<result.getColumnCount(); i++) {
-				args[i+2] = result.get(i);
-			}
-			callProcedure(insertUndoLogProc, args);
+		Object[] args = new Object[result.getColumnCount() + 2];
+		args[0] = txnId;
+		args[1] = undoStoredProc;
+		for(int i=0; i<result.getColumnCount(); i++) {
+			args[i+2] = result.get(i);
 		}
+		queueProcedureCall(insertUndoLogProc, args);
 	}
 
 	private void writeTxnRecord(ClientResponse[] resp) {
-		VoltTable result = verifyAndGetTheResults(resp);
-		if(result.advanceRow()) {
-			callProcedure("client_txn.insert", 
-					result.getString("txn_id"), 
-					result.getTimestampAsTimestamp("creation_time"),
-					result.getString("tbl")
-					);
-		}
+		VoltTable result = verifyAndGetTheResults(resp, 1);
+		queueProcedureCall("client_txn.insert", 
+				result.getString("txn_id"), 
+				result.getTimestampAsTimestamp("creation_time"),
+				result.getString("tbl")
+				);
 	}
 
 	private void runStoredProc(ClientResponse[] resp) {
 		verifyAndGetTheResults(resp);
-		queueProcedureCall(storedProc, procArgs);
+		if(procArgs.advanceRow())
+			queueProcedureCall(storedProc, procArgs.getRowObjects());
 	}
 
 	private void finish(ClientResponse[] resp) {
-		completeProcedure(verifyAndGetTheResults(resp));
+		completeProcedure(results);
 	}
 
 	private VoltTable verifyAndGetTheResults(ClientResponse[] resp) {
+		return verifyAndGetTheResults(resp, 0);
+	}
+	
+	private VoltTable verifyAndGetTheResults(ClientResponse[] resp, int resultIndex) {
 		if(resp[0].getStatus() != ClientResponse.SUCCESS) {
 			throw new CompoundProcAbortException(resp[0].getStatusString());
 		} else {
-			return resp[0].getResults()[0]; 
+			VoltTable results = resp[0].getResults()[resultIndex];
+			if(results.advanceRow())
+				return results;
 		}
+		return null;
 	}
 }

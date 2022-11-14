@@ -3,6 +3,7 @@ package com.voltdb.client;
 import java.io.IOException;
 import java.util.UUID;
 
+import org.voltdb.VoltTable;
 import org.voltdb.client.Client2;
 import org.voltdb.client.Client2Config;
 import org.voltdb.client.ClientFactory;
@@ -35,23 +36,26 @@ public class TransactionalClient {
 			String getUndoValsProc, 
 			String undoStoredProc, 
 			String storedProc, 
-			Object... args) 
+			VoltTable getUndoValsProcArgs,
+			VoltTable procArgs) 
 			throws ProcCallException, IOException {
-		Object[] allArgs = new Object[args.length + 5];
+		Object[] allArgs = new Object[7];
 		allArgs[0] = txnId;
 		allArgs[1] = insertUndoLogProc;
 		allArgs[2] = getUndoValsProc;
 		allArgs[3] = undoStoredProc;
 		allArgs[4] = storedProc;
-		ClientResponse resp = client.callProcedureSync("RollbackableTxn", args);
+		allArgs[5] = getUndoValsProcArgs;
+		allArgs[6] = procArgs;
+		ClientResponse resp = client.callProcedureSync("RollbackableTxn", allArgs);
 		return resp;
 	}
 	
 	public void rollback() throws IOException, ProcCallException {
-		client.callProcedureSync("RollbackTxn", null);
+		client.callProcedureSync("RollbackTxn", txnId);
 	}
 	
-	public void commit() {
-		
+	public void commit() throws IOException, ProcCallException {
+		client.callProcedureSync("CommitTxn", txnId);
 	}
 }
