@@ -1,7 +1,6 @@
 package com.voltdb.clienttxn;
 
-import static com.voltdb.clienttxn.Utils.allSuccessResponses;
-import static com.voltdb.clienttxn.Utils.applyToResults;
+import static com.voltdb.clienttxn.Utils.*;
 
 import java.util.Arrays;
 
@@ -35,7 +34,7 @@ public class RollbackTxn extends VoltCompoundProcedure {
 	}
 	
 	private void undoByTable(ClientResponse[] resp) {
-		applyToResults(resp, 0, this::runUndoProcs);
+		applyToAllResponses(resp, this::runUndoProcs);
 	}
 	
 	private void runUndoProcs(VoltTable undoLogs) {

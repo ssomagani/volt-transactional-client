@@ -38,18 +38,29 @@ public class Application {
 					new VoltTable.ColumnInfo("name", VoltType.STRING),
 					new VoltTable.ColumnInfo("id", VoltType.INTEGER)
 					);
-			Object[] values = {"one", 1};
+			Object[] values = {"uno", 1};
 			procArgs.addRow(values);
 			
-			response = client.callProcedureSync(txnId, "insert_undo_test", "test_select", 
-					"test_proc", "test_proc", getUndoValsProcArgs, procArgs);
+			response = client.callProcedureSync(txnId, "insert_undo_test_1", "test_1_select", 
+					"test_1_proc", "test_1_proc", getUndoValsProcArgs, procArgs);
 			
-//			if(response.getStatus() == ClientResponse.SUCCESS) {
-//				client.commit();
-//			} else {
+			response = client.callProcedureSync(txnId, "insert_undo_test_2", "test_2_select", 
+					"test_2_proc", "test_2_proc", getUndoValsProcArgs, procArgs);
+			
+			response = client.callSelect("test_select", getUndoValsProcArgs);
+			
+			VoltTable[] results = response.getResults();
+			if(results[0].advanceRow()) {
+				String name = results[0].getString("name");
+				long id = results[0].getLong("id");
+				System.out.println(id + " : " + name);
+			}
+			
+			if(response.getStatus() == ClientResponse.SUCCESS) {
+				client.commit();
+			} else {
 				client.rollback();
-//			}
-			
+			}
 		} catch (IOException | ProcCallException e1) {
 			e1.printStackTrace();
 		}
