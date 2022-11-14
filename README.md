@@ -22,7 +22,6 @@ Volt Transaction Client provides the framework to implement transactional semant
   * Start Transaction - `String txnId = client.startTransaction()`
   * Call Procedure - `response = client.callProcedureSync(txnId, "proc"...)`
   * Call Procedure - `response = client.callProcedureSync(txnId, "proc"...)`
-  * ***
   * Call Select Procedure - `response = client.callSelect("proc")`
   * Choose to commit or rollback - `client.commit()` or `client.rollback`
 * Refer to example in client/com/voltdb/example
