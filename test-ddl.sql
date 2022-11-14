@@ -18,7 +18,7 @@ create table undo_test(
 );
 partition table undo_test on column txn_id;
 
-create procedure insert_undo_test 
+create procedure insert_undo_test partition on table undo_test column txn_id parameter 0  
 	as BEGIN
 		insert into undo_test values ?, NOW, ?, ?, ?;
 		select txn_id, creation_time, 'undo_test' as TBL from undo_test order by creation_time desc limit 1;
@@ -27,5 +27,5 @@ create procedure insert_undo_test
 
 create procedure delete_undo_test as delete from undo_test where txn_id = ?;
 
-create procedure get_undo_test as select * from undo_test where txn_id = ?;
+create procedure get_undo_test as select undo_proc, name, id from undo_test where txn_id = ? order by creation_time asc;
 

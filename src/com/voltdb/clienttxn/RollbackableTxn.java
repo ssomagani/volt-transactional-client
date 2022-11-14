@@ -4,6 +4,7 @@ import org.apache.log4j.Logger;
 import org.voltdb.VoltCompoundProcedure;
 import org.voltdb.VoltTable;
 import org.voltdb.client.ClientResponse;
+import static com.voltdb.clienttxn.Utils.*;
 
 public class RollbackableTxn extends VoltCompoundProcedure {
 
@@ -76,20 +77,5 @@ public class RollbackableTxn extends VoltCompoundProcedure {
 
 	private void finish(ClientResponse[] resp) {
 		completeProcedure(results);
-	}
-
-	private VoltTable verifyAndGetTheResults(ClientResponse[] resp) {
-		return verifyAndGetTheResults(resp, 0);
-	}
-	
-	private VoltTable verifyAndGetTheResults(ClientResponse[] resp, int resultIndex) {
-		if(resp[0].getStatus() != ClientResponse.SUCCESS) {
-			throw new CompoundProcAbortException(resp[0].getStatusString());
-		} else {
-			VoltTable results = resp[0].getResults()[resultIndex];
-			if(results.advanceRow())
-				return results;
-		}
-		return null;
 	}
 }

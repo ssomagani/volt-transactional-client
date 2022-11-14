@@ -1,4 +1,4 @@
-package com.voltdb.client;
+package com.voltdb.example;
 
 import java.io.IOException;
 
@@ -7,6 +7,8 @@ import org.voltdb.VoltType;
 import org.voltdb.client.Client2Config;
 import org.voltdb.client.ClientResponse;
 import org.voltdb.client.ProcCallException;
+
+import com.voltdb.client.TransactionalClient;
 
 public class Application {
 
@@ -42,11 +44,11 @@ public class Application {
 			response = client.callProcedureSync(txnId, "insert_undo_test", "test_select", 
 					"test_proc", "test_proc", getUndoValsProcArgs, procArgs);
 			
-			if(response.getStatus() == ClientResponse.SUCCESS) {
-				client.commit();
-			} else {
+//			if(response.getStatus() == ClientResponse.SUCCESS) {
+//				client.commit();
+//			} else {
 				client.rollback();
-			}
+//			}
 			
 		} catch (IOException | ProcCallException e1) {
 			e1.printStackTrace();
