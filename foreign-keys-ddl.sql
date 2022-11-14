@@ -8,3 +8,4 @@ create table foreign_keys (
 
 create procedure GetForeignKeys as select * from foreign_keys where home_table = ?;
 create compound procedure from class org.voltdb.clienttxn.InsertAfterFKCheck;
+
