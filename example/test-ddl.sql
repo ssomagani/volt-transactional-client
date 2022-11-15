@@ -36,6 +36,8 @@ load classes classes.jar;
 ---------------------------------------------------------------------
 file -inlinebatch CREATE_PROC_BATCH
 
+create procedure test_select_by_id partition on table test column id as select id, name from test where id = ?;
+
 create procedure test_proc 
 	partition on table test column id parameter 1 
 	as 

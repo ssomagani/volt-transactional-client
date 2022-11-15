@@ -12,7 +12,7 @@ import com.voltdb.client.TransactionalClient;
 
 public class Application {
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException, ProcCallException {
 		ClientResponse response = null;
 		
 		Client2Config config = new Client2Config();
@@ -41,8 +41,8 @@ public class Application {
 			Object[] values = {"uno", 1};
 			procArgs.addRow(values);
 			
-			response = client.callProcedureSync(txnId, "insert_undo_test_1", "test_1_select", 
-					"test_1_proc", "test_1_proc", getUndoValsProcArgs, procArgs);
+			response = client.callUpdateProc(txnId, "test_1", 
+					"test_1_proc", getUndoValsProcArgs, procArgs);
 			
 			response = client.callProcedureSync(txnId, "insert_undo_test_2", "test_2_select", 
 					"test_2_proc", "test_2_proc", getUndoValsProcArgs, procArgs);
@@ -62,6 +62,7 @@ public class Application {
 				client.rollback();
 			}
 		} catch (IOException | ProcCallException e1) {
+			client.rollback();
 			e1.printStackTrace();
 		}
 

@@ -17,7 +17,6 @@ public class TransactionalClient {
 	
 	public TransactionalClient(Client2Config config) {
 		client = ClientFactory.createClient(config);
-		
 	}
 	
 	public void connect(String serverString) throws IOException {
@@ -34,6 +33,35 @@ public class TransactionalClient {
 		if(procArgs.advanceRow())
 			return client.callProcedureSync(selectProc, procArgs.getRowObjects());
 		return null;
+	}
+	
+	public ClientResponse callUpdateProc(
+			String txnId,
+			String table,
+			String updateProc,
+			VoltTable whereClauseArgs,
+			VoltTable procArgs
+			) throws IOException, ProcCallException {
+		Object[] allArgs = new Object[7];
+		allArgs[0] = txnId;
+		allArgs[1] = "insert_undo_" + table;
+		allArgs[2] = table + "_select_by_id";
+		allArgs[3] = updateProc;
+		allArgs[4] = updateProc;
+		allArgs[5] = whereClauseArgs;
+		allArgs[6] = procArgs;
+		ClientResponse resp = client.callProcedureSync("RollbackableTxn", allArgs);
+		return resp;
+	}
+	
+	public ClientResponse callInsertProc() {
+		//TODO Implement
+		return null;
+	}
+	
+	public ClientResponse callDeleteProc() {
+		//TODO Implement
+				return null;
 	}
 	
 	public ClientResponse callProcedureSync(
