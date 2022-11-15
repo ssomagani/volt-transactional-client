@@ -25,3 +25,11 @@ Volt Transaction Client provides the framework to implement transactional semant
   * Call Select Procedure - `response = client.callSelect("proc")`
   * Choose to commit or rollback - `client.commit()` or `client.rollback`
 * Refer to example in client/com/voltdb/example
+
+### TODO
+* Implement methods for insert and delete statements
+* Script to generate undo tables and procs based on table name
+* Script to generate all txn support procs from SQL Statement
+* Performance test and report (normal operations and disasters)
+* Foreign Key example
+* Script to populate foreign_keys table from DDL
