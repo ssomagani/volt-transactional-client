@@ -17,6 +17,7 @@ Volt Transaction Client provides the framework to implement transactional semant
 ### Client-side Transactions
 * Initial Setup - Run `sqlcmd < client-txn-ddl.sql` to create the schema and procedures for client-side transaction control.
 * Build the library - `javac -cp /.../voltdbclient-12.0.jar:/.../voltdb-12.0.jar:/.../log4j-1.x.jar -d bin $(find . -name "*.java"); jar -cvf classes.jar -C bin .`
+* Load server procs - `echo 'load classes classes.jar' | sqlcmd`
 * Integrate - Add classes.jar to your application's classpath. Instead of using Volt's org.voltdb.client.Client class, use com.voltdb.client.TransactionalClient.
 * Example -
   * Start Transaction - `String txnId = client.startTransaction()`
