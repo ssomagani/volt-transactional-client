@@ -1,0 +1,94 @@
+package com.voltdb.clienttxn;
+
+import java.io.IOException;
+
+import org.voltdb.VoltTable;
+import org.voltdb.VoltType;
+import org.voltdb.client.Client2Config;
+import org.voltdb.client.ClientResponse;
+import org.voltdb.client.ProcCallException;
+
+import com.voltdb.client.TransactionalClient;
+
+public class TestInsert {
+	
+	static TransactionalClient client;
+
+	public static void main(String[] args) throws ProcCallException {
+		
+		Client2Config config = new Client2Config();
+		
+		client = new TransactionalClient(config);
+		try {
+			client.connect("localhost");
+			
+//			testInsertCommit();
+			testInsertRollback();
+			
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
+	}
+	
+	private static void testInsertCommit() throws IOException, ProcCallException {
+		try { 
+
+			String txnId = client.startTransaction();
+			insert(txnId);
+			client.commit();
+			verify(txnId);
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		tearDown();
+	}
+	
+	private static void testInsertRollback() throws IOException, ProcCallException {
+		try { 
+
+			String txnId = client.startTransaction();
+			insert(txnId);
+			client.rollback();
+			verify(txnId);
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+//		tearDown();
+	}
+	
+	private static void insert(String txnId) throws IOException, ProcCallException {
+		VoltTable rowValues = new VoltTable(
+				new VoltTable.ColumnInfo("id", VoltType.INTEGER),
+				new VoltTable.ColumnInfo("name", VoltType.STRING)
+				);
+		Object[] values = {1, "Luke"};
+		rowValues.addRow(values);
+
+		client.insert(txnId, "user", rowValues);
+	}
+	
+	private static void verify(String txnId) throws Exception {
+		VoltTable rowValues = new VoltTable(
+				new VoltTable.ColumnInfo("id", VoltType.INTEGER)
+				);
+		Object[] selectVals = {1};
+		rowValues.addRow(selectVals);
+
+		ClientResponse resp = client.select("user_select_by_id", rowValues);
+		if(resp.getStatus() == ClientResponse.SUCCESS) {
+			VoltTable result = resp.getResults()[0];
+			if(result.advanceRow())
+				assert(result.getString(1) != "Luke") : " Unepected value in row" + result.getString(1);
+			else 
+				throw new Exception ("Didn't find rows that were meant to be inserted");
+		} else {
+			throw new Exception (resp.getStatusString());
+		}
+	}
+
+	private static void tearDown() throws IOException, ProcCallException {
+		client.client.callProcedureSync("@AdHoc", "delete from user");
+	}
+}

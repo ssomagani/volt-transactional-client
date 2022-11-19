@@ -35,6 +35,7 @@ public class Utils {
 				throwException(x.getStatusString());
 			} else {
 				Arrays.stream(x.getResults()).forEach(y -> {
+					System.out.println("Running undo " + y.getRowCount());
 					while(y.advanceRow())
 						resultFn.accept(y);
 				});
@@ -58,6 +59,8 @@ public class Utils {
 		if(resp[0].getStatus() != ClientResponse.SUCCESS) {
 			throwException(resp[0].getStatusString());
 		} else {
+			if(resp[0].getResults().length == 0) 
+				throwException("No results from transaction table");
 			VoltTable results = resp[0].getResults()[resultIndex];
 			while(results.advanceRow()) {
 				resultFn.accept(results);
@@ -79,9 +82,10 @@ public class Utils {
 		}
 	}
 	
-	private static void throwException(String msg) {
+	public static void throwException(String msg) {
 		StackTraceElement[] ste = Thread.currentThread().getStackTrace();
-		Arrays.stream(ste).forEach(x -> System.out.println(x));
-		throw new CompoundProcAbortException(msg);
+		StringBuffer stb = new StringBuffer();
+		Arrays.stream(ste).forEach(x -> {stb.append(x); stb.append("\n");} );
+		throw new CompoundProcAbortException(msg + " \n " + stb.toString());
 	}
 }

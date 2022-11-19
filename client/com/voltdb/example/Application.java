@@ -41,13 +41,13 @@ public class Application {
 			Object[] values = {"uno", 1};
 			procArgs.addRow(values);
 			
-			response = client.callUpdateProc(txnId, "test_1", 
+			response = client.update(txnId, "test_1", 
 					"test_1_proc", getUndoValsProcArgs, procArgs);
 			
-			response = client.callProcedureSync(txnId, "insert_undo_test_2", "test_2_select", 
+			response = client.callProcedureSync(txnId, "test_2_select", "insert_undo_test_2", 
 					"test_2_proc", "test_2_proc", getUndoValsProcArgs, procArgs);
 			
-			response = client.callSelect("test_select", getUndoValsProcArgs);
+			response = client.select("test_select", getUndoValsProcArgs);
 			
 			VoltTable[] results = response.getResults();
 			if(results[0].advanceRow()) {

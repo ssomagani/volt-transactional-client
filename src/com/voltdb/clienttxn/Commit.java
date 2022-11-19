@@ -5,7 +5,7 @@ import org.voltdb.VoltTable;
 import org.voltdb.client.ClientResponse;
 import static com.voltdb.clienttxn.Utils.*;
 
-public class CommitTxn extends VoltCompoundProcedure {
+public class Commit extends VoltCompoundProcedure {
 	
 	private String txnId;
 
@@ -30,7 +30,7 @@ public class CommitTxn extends VoltCompoundProcedure {
 	
 	private void deleteFromEachUndoRecordsTable(VoltTable undoRecordsTable) {
 		String opTable = undoRecordsTable.getString(2);
-		queueProcedureCall("delete_" + opTable, txnId);
+		queueProcedureCall(opTable + "_delete", txnId);
 	}
 	
 	private void deleteTxnRecords(ClientResponse[] resp) {
@@ -42,6 +42,6 @@ public class CommitTxn extends VoltCompoundProcedure {
 		if(allSuccessResponses(resp))
 			completeProcedure(resp[0].getResults());
 		else
-			abortProcedure(resp[0].getStatusString());	
+			throwException(resp[0].getStatusString());
 	}
 }

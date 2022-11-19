@@ -5,6 +5,16 @@ Volt Transaction Client provides the framework to implement transactional semant
 * Foreign Key Enforcement
 * Client-side Transactions
 
+## Design
+### Client-side Transactions
+
+#### Rollback Logic
+Undo operations
+  * insert - delete
+  * delete - insert
+  * update - update
+  * custom - custom
+
 ## How to use
 
 ### Foreign Key Enforcement
@@ -33,3 +43,6 @@ Volt Transaction Client provides the framework to implement transactional semant
 * Performance test and report (normal operations and disasters)
 * Foreign Key example
 * Script to populate foreign_keys table from DDL
+
+### Hacks
+* Identifying parameter set for undo stored procs is shaky righ now (Rollback.runUndoProcs())

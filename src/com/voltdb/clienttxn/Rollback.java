@@ -6,9 +6,10 @@ import java.util.Arrays;
 
 import org.voltdb.VoltCompoundProcedure;
 import org.voltdb.VoltTable;
+import org.voltdb.VoltType;
 import org.voltdb.client.ClientResponse;
 
-public class RollbackTxn extends VoltCompoundProcedure {
+public class Rollback extends VoltCompoundProcedure {
 
 	private String txnId;
 	
@@ -30,7 +31,7 @@ public class RollbackTxn extends VoltCompoundProcedure {
 	}
 	
 	private void getUndoLogsByTable(ClientResponse[] resp) {
-		applyToResults(resp, 0, (x) -> queueProcedureCall("get_" + x.getString("op_table"), txnId));
+		applyToResults(resp, 0, (x) -> queueProcedureCall(x.getString("op_table") + "_select_by_id", txnId));
 	}
 	
 	private void undoByTable(ClientResponse[] resp) {
@@ -38,11 +39,16 @@ public class RollbackTxn extends VoltCompoundProcedure {
 	}
 	
 	private void runUndoProcs(VoltTable undoLogs) {
-		queueProcedureCall(undoLogs.getString("undo_proc"), Arrays.copyOfRange(undoLogs.getRowObjects(), 1, undoLogs.getColumnCount()));
+		String undoProc = undoLogs.getString("undo_proc");
+		if(undoProc.endsWith("_delete")) {
+			queueProcedureCall(undoLogs.getString("undo_proc"), undoLogs.get("id", VoltType.INTEGER));
+		} else {
+			queueProcedureCall(undoLogs.getString("undo_proc"), Arrays.copyOfRange(undoLogs.getRowObjects(), 1, undoLogs.getColumnCount()));
+		}
 	}
 	
 	private void deleteFromEachUndoRecordsTable(ClientResponse[] resp) {
-		applyToResults(resp, 0, (x) -> queueProcedureCall("delete_" + x.getString("op_table"), txnId));
+		applyToResults(resp, 0, (x) -> queueProcedureCall(x.getString("op_table") + "_delete", txnId));
 	}
 	
 	private void deleteTxnRecords(ClientResponse[] resp) {

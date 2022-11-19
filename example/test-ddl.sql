@@ -37,6 +37,7 @@ load classes classes.jar;
 file -inlinebatch CREATE_PROC_BATCH
 
 create procedure test_select_by_id partition on table test column id as select id, name from test where id = ?;
+create procedure test_restore_row partition on table test column id as insert into test values (?, ?);
 
 create procedure test_proc 
 	partition on table test column id parameter 1 
@@ -46,6 +47,12 @@ create procedure test_proc
 create procedure insert_undo_test partition on table undo_test column txn_id parameter 0  
 	as BEGIN
 		insert into undo_test values ?, NOW, ?, ?, ?;
+		select txn_id, creation_time, 'undo_test' as TBL from undo_test order by creation_time desc limit 1;
+	END;
+
+create procedure insert_noargs_undo_test partition on table undo_test column txn_id parameter 0  
+	as BEGIN
+		insert into undo_test values ?, NOW, ?, -1, "";
 		select txn_id, creation_time, 'undo_test' as TBL from undo_test order by creation_time desc limit 1;
 	END;
 	

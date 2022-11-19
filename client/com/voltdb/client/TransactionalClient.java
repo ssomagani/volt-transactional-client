@@ -12,7 +12,7 @@ import org.voltdb.client.ProcCallException;
 
 public class TransactionalClient {
 	
-	private Client2 client;
+	public final Client2 client;
 	private String txnId;
 	
 	public TransactionalClient(Client2Config config) {
@@ -29,13 +29,13 @@ public class TransactionalClient {
 		return txnId;
 	}
 	
-	public ClientResponse callSelect(String selectProc, VoltTable procArgs) throws IOException, ProcCallException {
+	public ClientResponse select(String selectProc, VoltTable procArgs) throws IOException, ProcCallException {
 		if(procArgs.advanceRow())
 			return client.callProcedureSync(selectProc, procArgs.getRowObjects());
 		return null;
 	}
 	
-	public ClientResponse callUpdateProc(
+	public ClientResponse update(
 			String txnId,
 			String table,
 			String updateProc,
@@ -54,20 +54,40 @@ public class TransactionalClient {
 		return resp;
 	}
 	
-	public ClientResponse callInsertProc() {
-		//TODO Implement
-		return null;
+	public ClientResponse insert(
+			String txnId,
+			String table,
+			VoltTable procArgs
+			) throws IOException, ProcCallException {
+		Object[] allArgs = new Object[5];
+		allArgs[0] = txnId;
+		allArgs[1] = table + "_undo_insert_blank";
+		allArgs[2] = table + "_delete";
+		allArgs[3] = table + "_insert";
+		allArgs[4] = procArgs;
+		return client.callProcedureSync("Insert", allArgs);
 	}
 	
-	public ClientResponse callDeleteProc() {
-		//TODO Implement
-				return null;
+	public ClientResponse delete(
+		String txnId,
+		String table,
+		VoltTable whereClauseArgs,
+		VoltTable procArgs) throws IOException, ProcCallException {
+		Object[] allArgs = new Object[7];
+		allArgs[0] = txnId;
+		allArgs[1] = table + "_select_by_id";
+		allArgs[2] = "insert_undo_" + table;
+		allArgs[3] = "insert_" + table;
+		allArgs[4] = "delete_" + table;
+		allArgs[5] = whereClauseArgs;
+		allArgs[6] = procArgs;
+		return client.callProcedureSync("Delete", allArgs);
 	}
 	
 	public ClientResponse callProcedureSync(
 			String txnId, 
-			String insertUndoLogProc, 
 			String getUndoValsProc, 
+			String insertUndoLogProc, 
 			String undoStoredProc, 
 			String storedProc, 
 			VoltTable getUndoValsProcArgs,
@@ -86,10 +106,10 @@ public class TransactionalClient {
 	}
 	
 	public void rollback() throws IOException, ProcCallException {
-		client.callProcedureSync("RollbackTxn", txnId);
+		client.callProcedureSync("Rollback", txnId);
 	}
 	
 	public void commit() throws IOException, ProcCallException {
-		client.callProcedureSync("CommitTxn", txnId);
+		client.callProcedureSync("Commit", txnId);
 	}
 }
