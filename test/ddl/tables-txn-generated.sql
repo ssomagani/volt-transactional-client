@@ -9,10 +9,19 @@ DROP_TABLE_BATCH
 ---------------------------------------------------------------------
 file -inlinebatch CREATE_TABLE_BATCH
 
+create table undo_procs (
+	txn_id varchar not null,
+	creation_time timestamp not null, 
+	undo_proc varchar not null, 
+	undo_args varbinary(100) not null,
+	primary key (txn_id, creation_time)
+);
+
 create table user_undo (
 	txn_id varchar not null,
 	creation_time timestamp not null, 
 	undo_proc varchar not null, 
+	undo_args varbinary(10) not null,
 	id bigint not null,
 	name varchar(16),
 	last_seen TIMESTAMP DEFAULT NOW,
@@ -24,6 +33,7 @@ CREATE table product_undo (
 	txn_id varchar not null,
 	creation_time timestamp not null, 
 	undo_proc varchar not null, 
+	undo_args varbinary(10) not null,
 	id bigint not null,
 	name varchar(50) not null,
 	unit_cost bigint not null,
@@ -35,6 +45,7 @@ create table user_usage_undo (
 	txn_id varchar not null,
 	creation_time timestamp not null, 
 	undo_proc varchar not null, 
+	undo_args varbinary(10) not null,
 	user_id bigint not null,
 	product_id bigint not null,
 	session_id bigint not null,
