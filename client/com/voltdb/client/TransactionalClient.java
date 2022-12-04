@@ -1,13 +1,9 @@
 package com.voltdb.client;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.UUID;
 
 import org.voltdb.VoltTable;
-import org.voltdb.VoltTable.ColumnInfo;
-import org.voltdb.VoltType;
 import org.voltdb.client.Client2;
 import org.voltdb.client.Client2Config;
 import org.voltdb.client.ClientFactory;
@@ -18,8 +14,7 @@ public class TransactionalClient {
 	
 	public final Client2 client;
 	private String txnId;
-	private final HashMap<String, ClientVoltTable> tables = new HashMap<>();
-	private final HashMap<String, ArrayList<ColumnInfo>> procCols = new HashMap<>();
+	public VoltSchema schema;
 	
 	public TransactionalClient(Client2Config config) {
 		client = ClientFactory.createClient(config);
@@ -27,78 +22,9 @@ public class TransactionalClient {
 	
 	public void connect(String serverString) throws IOException, ProcCallException {
 		client.connectSync(serverString);
-		getSchema();
+		schema = new VoltSchema(client);
 	}
 	
-	private void getSchema() throws IOException, ProcCallException {
-		getTableColumns();
-		getPrimaryKeys();
-		getProcedures();
-	}
-	
-	private void getTableColumns() throws IOException, ProcCallException {
-		ClientResponse resp = client.callProcedureSync("@SystemCatalog", "COLUMNS");
-		VoltTable result = resp.getResults()[0];
-				
-		HashMap<String, ArrayList<ColumnInfo>> tableCols = new HashMap<>();
-		
-		while(result.advanceRow()) {
-			String tableName = result.getString(2);
-			ArrayList<ColumnInfo> columns = tableCols.get(tableName);
-			if(columns == null) {
-				columns = new ArrayList<ColumnInfo>();
-				tableCols.put(tableName, columns);
-			}
-			
-			ColumnInfo col = new ColumnInfo(
-					result.getString(3), 
-					VoltType.typeFromString(result.getString(5))
-					);
-			
-			columns.add(col);
-		}
-		
-		tableCols.keySet().forEach((tableName) -> {
-			ClientVoltTable clientVoltTable = new ClientVoltTable(tableName);
-			clientVoltTable.createTable(tableCols.get(tableName));
-			tables.put(tableName, clientVoltTable);
-		});
-	}
-	
-	private void getPrimaryKeys() throws IOException, ProcCallException {
-		ClientResponse resp = client.callProcedureSync("@SystemCatalog", "PRIMARYKEYS");
-		VoltTable result = resp.getResults()[0];
-		
-		while(result.advanceRow()) {
-			String tableName = result.getString(2);
-			ClientVoltTable table = tables.get(tableName);
-			table.primaryKeyIndices.add(table._table.getColumnIndex(result.getString(3)));
-		}
-	}
-	
-	private void getProcedures() throws IOException, ProcCallException {
-		ClientResponse resp = client.callProcedureSync("@SystemCatalog", "PROCEDURECOLUMNS");
-		VoltTable result = resp.getResults()[0];
-	
-		while(result.advanceRow()) {
-			String proc = result.getString(2);
-			ArrayList<ColumnInfo> columns = procCols.get(proc);
-			if(columns == null) {
-				columns = new ArrayList<ColumnInfo>();
-				procCols.put(proc, columns);
-			}
-			
-			String type = result.getString(6);
-			if(type.equals("OTHER"))
-				type = "VOLTTABLE";
-			ColumnInfo col = new ColumnInfo(
-					result.getString(3), 
-					VoltType.typeFromString(type)
-					);
-			columns.add(col);
-		}
-	}
-
 	public String startTransaction() throws IOException, ProcCallException {
 		UUID uuid = UUID.randomUUID();
 		txnId = uuid.toString();
@@ -132,15 +58,22 @@ public class TransactionalClient {
 	
 	public ClientResponse insert(
 			String txnId,
-			String table,
-			VoltTable procArgs
-			) throws IOException, ProcCallException {
-		Object[] allArgs = new Object[5];
+			String tableName,
+			Object... insertArgs
+			) throws IOException, ProcCallException, Exception {
+		
+		ClientVoltTable table = schema.getTable(tableName);
+		VoltTable insertArgTable = table.getInsertArgsTable(insertArgs);
+		VoltTable undoArgTable = table.getPrimaryKeyTable(insertArgTable);
+		
+		Object[] allArgs = new Object[6];
 		allArgs[0] = txnId;
-		allArgs[1] = table + "_undo_insert_blank";
-		allArgs[2] = table + "_delete";
-		allArgs[3] = table + "_insert";
-		allArgs[4] = procArgs;
+		allArgs[1] = "undo_procs.insert";
+		allArgs[2] = tableName + "_delete";
+		allArgs[3] = tableName + "_insert";
+		allArgs[4] = undoArgTable;
+		allArgs[5] = insertArgTable;
+		
 		return client.callProcedureSync("Insert", allArgs);
 	}
 	

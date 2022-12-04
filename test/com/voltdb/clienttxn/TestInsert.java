@@ -14,6 +14,7 @@ import org.voltdb.VoltType;
 import org.voltdb.client.Client2Config;
 import org.voltdb.client.ClientResponse;
 import org.voltdb.client.ProcCallException;
+import org.voltdb.types.TimestampType;
 
 import com.voltdb.client.TransactionalClient;
 
@@ -29,9 +30,9 @@ public class TestInsert {
 		try {
 			client.connect("localhost");
 
-			//			testInsertCommit();
+						testInsertCommit();
 			//			testInsertRollback();
-			test();
+//			test();
 
 		} catch (IOException e1) {
 			e1.printStackTrace();
@@ -66,15 +67,8 @@ public class TestInsert {
 		//		tearDown();
 	}
 
-	private static void insert(String txnId) throws IOException, ProcCallException {
-		VoltTable rowValues = new VoltTable(
-				new VoltTable.ColumnInfo("id", VoltType.INTEGER),
-				new VoltTable.ColumnInfo("name", VoltType.STRING)
-				);
-		Object[] values = {1, "Luke"};
-		rowValues.addRow(values);
-
-		client.insert(txnId, "user", rowValues);
+	private static void insert(String txnId) throws IOException, ProcCallException, Exception {
+		client.insert(txnId, "USER_USAGE", 1, 2, 3, 200, new TimestampType("2022-12-04 11:07:21.242000"));
 	}
 
 	private static void verify(String txnId) throws Exception {
