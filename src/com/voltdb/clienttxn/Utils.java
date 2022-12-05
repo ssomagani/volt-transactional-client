@@ -9,6 +9,10 @@ import org.voltdb.VoltCompoundProcedure.CompoundProcAbortException;
 import org.voltdb.client.ClientResponse;
 
 public class Utils {
+	
+	public static final String UNDO_LOG_DELETE = "undo_log_delete";
+	public static final String UNDO_LOG_SELECT = "undo_log_select";
+	public static final String UNDO_LOG_INSERT = "undo_log_insert";
 
 	public static VoltTable verifyAndGetTheResults(ClientResponse[] resp) {
 		return verifyAndGetTheResults(resp, 0);

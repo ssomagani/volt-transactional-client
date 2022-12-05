@@ -1,5 +1,7 @@
 package com.voltdb.clienttxn;
 
+import java.io.IOException;
+
 import org.apache.log4j.Logger;
 import org.voltdb.VoltTable;
 
@@ -24,9 +26,14 @@ public class Procedure extends Rollbackable {
 		this.theProc = theProc;
 		this.procArgs = procArgs;
 
-		newStageList(this::callGetUndoValsProc)
-		.then(this::callInsertUndoLogProc)
-		.then(this::writeTxnRecord)
+		newStageList(this::selectExistingVals)
+		.then(t -> {
+			try {
+				insertUndoLog(t);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		})
 		.then(this::callTheProc)
 		.then(this::finish)
 		.build();

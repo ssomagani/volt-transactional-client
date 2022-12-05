@@ -1,7 +1,6 @@
 package com.voltdb.clienttxn;
 
 import org.voltdb.VoltCompoundProcedure;
-import org.voltdb.VoltTable;
 import org.voltdb.client.ClientResponse;
 import static com.voltdb.clienttxn.Utils.*;
 
@@ -12,30 +11,15 @@ public class Commit extends VoltCompoundProcedure {
 	public long run(String txnId) {
 		this.txnId = txnId;
 		
-		newStageList(this::getTxnRecords)
-		.then(this::runUndoProc)
-		.then(this::deleteTxnRecords)
+		newStageList
+		(this::deleteUndoLogs)
 		.then(this::finish)
 		.build();
 		return 0;
 	}
 	
-	private void getTxnRecords(ClientResponse[] resp) {
-		queueProcedureCall("GetTxnRecords", txnId);
-	}
-	
-	private void runUndoProc(ClientResponse[] resp) {
-		applyToResults(resp, 0, this::deleteFromEachUndoRecordsTable);
-	}
-	
-	private void deleteFromEachUndoRecordsTable(VoltTable undoRecordsTable) {
-		String opTable = undoRecordsTable.getString(2);
-		queueProcedureCall(opTable + "_delete", txnId);
-	}
-	
-	private void deleteTxnRecords(ClientResponse[] resp) {
-		if(allSuccessResponses(resp))
-			queueProcedureCall("DeleteTxnRecords", txnId);
+	private void deleteUndoLogs(ClientResponse[] resp) {
+		queueProcedureCall(UNDO_LOG_DELETE, txnId);
 	}
 	
 	private void finish(ClientResponse[] resp) {

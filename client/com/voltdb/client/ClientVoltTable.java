@@ -53,7 +53,7 @@ public class ClientVoltTable {
 		return _table.getColumnIndex(columnName);
 	}
 
-	public VoltTable getPrimaryKeyTable(VoltTable superSetTable) throws RuntimeException {
+	public VoltTable getLoadedPrimaryKeyTable(VoltTable superSetTable) throws RuntimeException {
 		if(!superSetTable.advanceRow())
 			throw new RuntimeException("No rows to copy");
 
@@ -66,5 +66,9 @@ public class ClientVoltTable {
 		VoltTable table = primaryColsTable.clone(0);
 		table.addRow(primaryKeyVals);
 		return table;
+	}
+	
+	public VoltTable getPrimaryKeyTable() {
+		return primaryColsTable.clone(0);
 	}
 }

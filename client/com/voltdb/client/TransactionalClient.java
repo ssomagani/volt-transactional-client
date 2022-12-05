@@ -11,32 +11,32 @@ import org.voltdb.client.ClientResponse;
 import org.voltdb.client.ProcCallException;
 
 public class TransactionalClient {
-	
+
 	public final Client2 client;
 	private String txnId;
 	public VoltSchema schema;
-	
+
 	public TransactionalClient(Client2Config config) {
 		client = ClientFactory.createClient(config);
 	}
-	
+
 	public void connect(String serverString) throws IOException, ProcCallException {
 		client.connectSync(serverString);
 		schema = new VoltSchema(client);
 	}
-	
+
 	public String startTransaction() throws IOException, ProcCallException {
 		UUID uuid = UUID.randomUUID();
 		txnId = uuid.toString();
 		return txnId;
 	}
-	
+
 	public ClientResponse select(String selectProc, VoltTable procArgs) throws IOException, ProcCallException {
 		if(procArgs.advanceRow())
 			return client.callProcedureSync(selectProc, procArgs.getRowObjects());
 		return null;
 	}
-	
+
 	public ClientResponse update(
 			String txnId,
 			String table,
@@ -55,33 +55,51 @@ public class TransactionalClient {
 		ClientResponse resp = client.callProcedureSync("RollbackableTxn", allArgs);
 		return resp;
 	}
-	
+
 	public ClientResponse insert(
 			String txnId,
 			String tableName,
 			Object... insertArgs
-			) throws IOException, ProcCallException, Exception {
-		
+			) throws IOException, ProcCallException, RuntimeException {
+
 		ClientVoltTable table = schema.getTable(tableName);
 		VoltTable insertArgTable = table.getInsertArgsTable(insertArgs);
-		VoltTable undoArgTable = table.getPrimaryKeyTable(insertArgTable);
-		
-		Object[] allArgs = new Object[6];
+		VoltTable undoArgTable = table.getLoadedPrimaryKeyTable(insertArgTable);
+
+		Object[] allArgs = new Object[5];
 		allArgs[0] = txnId;
-		allArgs[1] = "undo_procs.insert";
-		allArgs[2] = tableName + "_delete";
-		allArgs[3] = tableName + "_insert";
-		allArgs[4] = undoArgTable;
-		allArgs[5] = insertArgTable;
-		
+		allArgs[1] = tableName.toUpperCase() + ".delete";
+		allArgs[2] = tableName.toUpperCase() + ".insert";
+		allArgs[3] = undoArgTable;
+		allArgs[4] = insertArgTable;
+
 		return client.callProcedureSync("Insert", allArgs);
 	}
-	
+
 	public ClientResponse delete(
-		String txnId,
-		String table,
-		VoltTable whereClauseArgs,
-		VoltTable procArgs) throws IOException, ProcCallException {
+			String txnId,
+			String tableName,
+			Object... args
+			) throws IOException, ProcCallException {
+
+		ClientVoltTable table = schema.getTable(tableName);
+		VoltTable argTable = table.getPrimaryKeyTable();
+		argTable.addRow(args);
+
+		Object[] allArgs = new Object[5];
+		allArgs[0] = txnId;
+		allArgs[1] = tableName.toUpperCase() + ".select";
+		allArgs[2] = tableName.toUpperCase() + ".insert";
+		allArgs[3] = tableName.toUpperCase() + ".delete";
+		allArgs[4] = argTable;
+		return client.callProcedureSync("Delete", allArgs);
+	}
+
+	public ClientResponse deleteWhere(
+			String txnId,
+			String table,
+			VoltTable whereClauseArgs,
+			VoltTable procArgs) throws IOException, ProcCallException {
 		Object[] allArgs = new Object[7];
 		allArgs[0] = txnId;
 		allArgs[1] = table + "_select_by_id";
@@ -92,7 +110,7 @@ public class TransactionalClient {
 		allArgs[6] = procArgs;
 		return client.callProcedureSync("Delete", allArgs);
 	}
-	
+
 	public ClientResponse callProcedureSync(
 			String txnId, 
 			String getUndoValsProc, 
@@ -101,7 +119,7 @@ public class TransactionalClient {
 			String storedProc, 
 			VoltTable getUndoValsProcArgs,
 			VoltTable procArgs) 
-			throws ProcCallException, IOException {
+					throws ProcCallException, IOException {
 		Object[] allArgs = new Object[7];
 		allArgs[0] = txnId;
 		allArgs[1] = insertUndoLogProc;
@@ -110,15 +128,19 @@ public class TransactionalClient {
 		allArgs[4] = storedProc;
 		allArgs[5] = getUndoValsProcArgs;
 		allArgs[6] = procArgs;
-		ClientResponse resp = client.callProcedureSync("RollbackableTxn", allArgs);
+		ClientResponse resp = client.callProcedureSync("Procedure", allArgs);
 		return resp;
 	}
-	
+
 	public void rollback() throws IOException, ProcCallException {
 		client.callProcedureSync("Rollback", txnId);
 	}
-	
+
 	public void commit() throws IOException, ProcCallException {
-		client.callProcedureSync("Commit", txnId);
+		client.callProcedureSync("undo_log_delete", txnId);
+	}
+
+	public void setTxnId(String txnId) { // For test only
+		this.txnId = txnId;
 	}
 }

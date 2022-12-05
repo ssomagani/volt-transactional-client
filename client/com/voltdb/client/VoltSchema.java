@@ -12,8 +12,6 @@ import org.voltdb.client.Client2;
 import org.voltdb.client.ClientResponse;
 import org.voltdb.client.ProcCallException;
 
-import static com.voltdb.client.ClientVoltTable.TYPE_CONVERSION_PARAM;
-
 public class VoltSchema {
 	
 	private final HashMap<String, ClientVoltTable> tables = new HashMap<>();
@@ -67,6 +65,10 @@ public class VoltSchema {
 			ClientVoltTable table = tables.get(tableName);
 			table.primaryKeyIndices.add(table.getColumnIndex(result.getString(3)));
 		}
+		
+		tables.values().stream().forEach((table) -> {
+			Collections.sort(table.primaryKeyIndices);
+		});
 	}
 	
 	private void loadProcedures() throws IOException, ProcCallException {
@@ -89,7 +91,6 @@ public class VoltSchema {
 					VoltType.typeFromString(type)
 					);
 			columns.add(new ColumnWithPosition((int) result.getLong(17), col));
-			Collections.sort(columns);
 		}
 	}
 	
@@ -97,15 +98,17 @@ public class VoltSchema {
 		tables.keySet().forEach((tableName) -> {
 			String insertProc = tableName.toUpperCase() + ".insert";
 			if(procedures.containsKey(insertProc)) {
-				ArrayList<ColumnWithPosition> procCols = procedures.get(insertProc);
-				VoltTable insertColsTable = new VoltTable(ColumnWithPosition.convertToColumnInfo(procCols));
+				ArrayList<ColumnWithPosition> sortedProcCols = (ArrayList<ColumnWithPosition>) procedures.get(insertProc).clone();
+				Collections.sort(sortedProcCols);
+				VoltTable insertColsTable = new VoltTable(ColumnWithPosition.convertToColumnInfo(sortedProcCols));
 				tables.get(tableName).setInsertCols(insertColsTable);
 			}
 			
 			String deleteProc = tableName.toUpperCase() + ".delete";
 			if(procedures.containsKey(deleteProc)) {
-				ArrayList<ColumnWithPosition> procCols = procedures.get(deleteProc);
-				VoltTable primaryColsTable = new VoltTable(ColumnWithPosition.convertToColumnInfo(procCols));
+				ArrayList<ColumnWithPosition> sortedProcCols = (ArrayList<ColumnWithPosition>)procedures.get(deleteProc).clone();
+				Collections.sort(sortedProcCols);
+				VoltTable primaryColsTable = new VoltTable(ColumnWithPosition.convertToColumnInfo(sortedProcCols));
 				tables.get(tableName).setPrimaryCols(primaryColsTable);
 			}
 		});

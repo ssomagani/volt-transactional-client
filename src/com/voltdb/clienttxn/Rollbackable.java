@@ -2,6 +2,11 @@ package com.voltdb.clienttxn;
 
 import static com.voltdb.clienttxn.Utils.*;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.util.Arrays;
+
 import org.voltdb.VoltCompoundProcedure;
 import org.voltdb.VoltTable;
 import org.voltdb.client.ClientResponse;
@@ -19,16 +24,6 @@ public abstract class Rollbackable extends VoltCompoundProcedure {
 	// Flag to track cases where the stored proc doesn't result in any row changes
 	protected Boolean undoPossible = Boolean.TRUE; 
 
-	protected void writeTxnRecord(ClientResponse[] resp) {
-		System.out.println("writeTxnRecord");
-		VoltTable result = verifyAndGetTheResults(resp, 1);
-		queueProcedureCall("client_txn.insert", 
-				result.getString("txn_id"), 
-				result.getTimestampAsTimestamp("creation_time"),
-				result.getString("tbl")
-				);
-	}
-
 	protected void finish(ClientResponse[] resp) {
 		System.out.println("finish");
 		if(resp[0].getStatus() == ClientResponse.SUCCESS)
@@ -41,29 +36,48 @@ public abstract class Rollbackable extends VoltCompoundProcedure {
 		System.out.println("callTheProc");
 		verifyAndGetTheResults(resp);
 		if(procArgs.advanceRow()) {
+			System.out.println(theProc);
+			Arrays.stream(procArgs.getRowObjects()).forEach((x) -> System.out.println(x));
 			queueProcedureCall(theProc, procArgs.getRowObjects());
 		} else {
-			
+			queueProcedureCall(theProc);
 		}
 	}
 
-	protected void callGetUndoValsProc(ClientResponse[] resp) {
+	protected void selectExistingVals(ClientResponse[] resp) {
 		if(getUndoValsProcArgs.advanceRow())
 			queueProcedureCall(getUndoValsProc, getUndoValsProcArgs.getRowObjects());
+		else 
+			queueProcedureCall(getUndoValsProc);
 	}
 
-	protected void callInsertUndoLogProc(ClientResponse[] resp) {
+	protected void insertUndoLog(ClientResponse[] resp) throws IOException {
 		VoltTable result = verifyAndGetTheResults(resp);
-		if(result != null) {
-			Object[] args = new Object[result.getColumnCount() + 2];
+		insertUndoLog(result);
+	}
+	
+	protected void insertUndoLog(VoltTable undoValsTable) throws IOException {
+		if(undoValsTable != null) {
+			undoPossible = Boolean.TRUE;
+			Object[] args = new Object[3];
 			args[0] = txnId;
 			args[1] = undoProc;
-			for(int i=0; i<result.getColumnCount(); i++) {
-				args[i+2] = result.get(i);
-			}
-			queueProcedureCall(insertUndoLogProc, args);
+			args[2] = getByteArray(undoValsTable);
+			queueProcedureCall(UNDO_LOG_INSERT, args);
 		} else {
 			undoPossible = Boolean.FALSE;
 		}
+	}
+
+	protected byte[] getByteArray(VoltTable argsTable) throws IOException {
+		Object[] argsArray = new Object[argsTable.getColumnCount()];
+		for(int i=0; i<argsArray.length; i++) {
+			argsArray[i] = argsTable.get(i);
+		}
+		
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		ObjectOutputStream oos = new ObjectOutputStream(bos);
+		oos.writeObject(argsArray);
+		return bos.toByteArray();
 	}
 }
