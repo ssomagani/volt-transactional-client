@@ -1,6 +1,6 @@
 package com.voltdb.clienttxn;
 
-import java.io.IOException;
+import static com.voltdb.clienttxn.Utils.applyToAllResults;
 
 import org.voltdb.VoltTable;
 
@@ -23,14 +23,8 @@ public class Update extends Rollbackable {
 		this.theProc = theProc;
 		this.procArgs = procArgs;
 
-		newStageList(this::selectExistingVals)
-		.then(t -> {
-			try {
-				insertUndoLog(t);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		})
+		newStageList(this::selectRowsToBeAffected)
+		.then((t) -> applyToAllResults(t, this::insertUndoLog))
 		.then(this::callTheProc)
 		.then(this::finish)
 		.build();

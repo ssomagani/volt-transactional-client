@@ -19,18 +19,30 @@ public class TestRollback extends Test {
 		client.connect("localhost");
 		
 		String txnId = client.startTransaction();
+		setUp(client);
 		
 		TimestampType now = new TimestampType(Calendar.getInstance().getTime());
-		client.insert(txnId, "USER_USAGE", 2, 3, 4, 200, now);
+		client.insert("USER_USAGE", 2, 3, 4, 200, now);
 		assertRowExists(client.client.callProcedureSync("undo_log.select", txnId, now));
 		
 		now = new TimestampType(Calendar.getInstance().getTime());
-		client.insert(txnId, "USER", 1, "luke", now);
+		client.insert("USER", 1, "luke", now);
 		assertRowExists(client.client.callProcedureSync("undo_log.select", txnId, now));
+		
+		client.delete("USER", 2);
+		assertRowsDontExist(client.client.callProcedureSync("@AdHoc", "select * from user where id = 2"));
 		
 		client.rollback();
 		assertRowsDontExist(client.client.callProcedureSync("@AdHoc", "select * from undo_log where txn_id = '" + txnId + "'"));
 		assertRowsDontExist(client.client.callProcedureSync("@AdHoc", "select * from user_usage where user_id = 2"));
 		assertRowsDontExist(client.client.callProcedureSync("@AdHoc", "select * from user where id = 1"));
+		assertRowExists(client.client.callProcedureSync("@AdHoc", "select * from user where id = 2"));
+	}
+	
+	private static void setUp(TransactionalClient client) throws IOException, ProcCallException {
+		client.startTransaction();
+		TimestampType now = new TimestampType(Calendar.getInstance().getTime());
+		client.insert("USER", 2, "anakin", now);
+		client.commit();
 	}
 }

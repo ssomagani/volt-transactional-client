@@ -9,7 +9,9 @@ import java.util.Arrays;
 
 import org.voltdb.VoltCompoundProcedure;
 import org.voltdb.VoltTable;
+import org.voltdb.VoltType;
 import org.voltdb.client.ClientResponse;
+import org.voltdb.types.TimestampType;
 
 public abstract class Rollbackable extends VoltCompoundProcedure {
 
@@ -35,6 +37,7 @@ public abstract class Rollbackable extends VoltCompoundProcedure {
 	protected void callTheProc(ClientResponse[] resp) {
 		System.out.println("callTheProc");
 		verifyAndGetTheResults(resp);
+		procArgs.resetRowPosition();
 		if(procArgs.advanceRow()) {
 			System.out.println(theProc);
 			Arrays.stream(procArgs.getRowObjects()).forEach((x) -> System.out.println(x));
@@ -44,25 +47,25 @@ public abstract class Rollbackable extends VoltCompoundProcedure {
 		}
 	}
 
-	protected void selectExistingVals(ClientResponse[] resp) {
+	protected void selectRowsToBeAffected(ClientResponse[] resp) {
 		if(getUndoValsProcArgs.advanceRow())
 			queueProcedureCall(getUndoValsProc, getUndoValsProcArgs.getRowObjects());
 		else 
 			queueProcedureCall(getUndoValsProc);
 	}
-
-	protected void insertUndoLog(ClientResponse[] resp) throws IOException {
-		VoltTable result = verifyAndGetTheResults(resp);
-		insertUndoLog(result);
-	}
 	
-	protected void insertUndoLog(VoltTable undoValsTable) throws IOException {
+	protected void insertUndoLog(VoltTable undoValsTable) {
 		if(undoValsTable != null) {
 			undoPossible = Boolean.TRUE;
 			Object[] args = new Object[3];
 			args[0] = txnId;
 			args[1] = undoProc;
-			args[2] = getByteArray(undoValsTable);
+			try {
+				args[2] = getByteArray(undoValsTable);
+			} catch (IOException e) {
+				e.printStackTrace();
+				abortProcedure(e.getMessage());
+			}
 			queueProcedureCall(UNDO_LOG_INSERT, args);
 		} else {
 			undoPossible = Boolean.FALSE;
@@ -72,7 +75,10 @@ public abstract class Rollbackable extends VoltCompoundProcedure {
 	protected byte[] getByteArray(VoltTable argsTable) throws IOException {
 		Object[] argsArray = new Object[argsTable.getColumnCount()];
 		for(int i=0; i<argsArray.length; i++) {
-			argsArray[i] = argsTable.get(i);
+			if(argsTable.getColumnType(i) == VoltType.TIMESTAMP)
+				argsArray[i] = ((TimestampType) argsTable.get(i)).asExactJavaDate();
+			else
+				argsArray[i] = argsTable.get(i);
 		}
 		
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();

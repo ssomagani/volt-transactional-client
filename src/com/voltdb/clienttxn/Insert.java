@@ -13,38 +13,36 @@ public class Insert extends Rollbackable {
 
 	public long run(
 			String txnId,
-			String undoProc, 
-			String theProc, 
-			VoltTable undoArgs,
-			VoltTable procArgs) {
+			String deleteProc, 
+			String insertProc, 
+			VoltTable deleteProcArgs,
+			VoltTable insertProcArgs) {
 
 		this.txnId = txnId;
-		this.undoProc = undoProc;
-		this.theProc = theProc;
-		this.undoArgs = undoArgs;
-		this.procArgs = procArgs;
+		this.undoProc = deleteProc;
+		this.theProc = insertProc;
+		this.undoArgs = deleteProcArgs;
+		this.procArgs = insertProcArgs;
 
-		newStageList(t -> {
-			try {
-				insertUndoLog(t);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		})
+		newStageList(this::insertUndoLog)
 		.then(this::callTheProc)
 		.then(this::finish)
 		.build();
 		return 0;
 	}
 
-	protected void insertUndoLog(ClientResponse[] resp) throws IOException {
+	protected void insertUndoLog(ClientResponse[] resp) {
 		System.out.println("callInsertUndoLogProc");
 		if(undoArgs.advanceRow()) {
 			Object[] args = new Object[3];
 			args[0] = txnId;
 			args[1] = undoProc;
-			args[2] = getByteArray(undoArgs);
-			
+			try {
+				args[2] = getByteArray(undoArgs);
+			} catch (IOException e) {
+				e.printStackTrace();
+				abortProcedure(e.getMessage());
+			}
 			queueProcedureCall(UNDO_LOG_INSERT, args);
 			undoArgs.resetRowPosition();
 		}

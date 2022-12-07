@@ -1,6 +1,6 @@
 package com.voltdb.clienttxn;
 
-import java.io.IOException;
+import static com.voltdb.clienttxn.Utils.applyToAllResults;
 
 import org.voltdb.VoltTable;
 
@@ -8,25 +8,20 @@ public class Delete extends Rollbackable {
 
 	public long run(
 			String txnId,
-			String getUndoValsProc, 
-			String undoProc, 
-			String theProc, 
-			VoltTable procArgs) {
+			String selectProc, 
+			String insertProc, 
+			String deleteProc, 
+			VoltTable whereClauseArgs) {
 
 		this.txnId = txnId;
-		this.getUndoValsProc = getUndoValsProc;
-		this.undoProc = undoProc;
-		this.theProc = theProc;
-		this.procArgs = procArgs;
+		this.getUndoValsProc = selectProc;
+		this.undoProc = insertProc;
+		this.theProc = deleteProc;
+		this.procArgs = whereClauseArgs;
+		this.getUndoValsProcArgs = whereClauseArgs;
 
-		newStageList(this::selectExistingVals)
-		.then(t -> {
-			try {
-				insertUndoLog(t);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		})
+		newStageList(this::selectRowsToBeAffected)
+		.then((t) -> applyToAllResults(t, this::insertUndoLog))
 		.then(this::callTheProc)
 		.then(this::finish)
 		.build();

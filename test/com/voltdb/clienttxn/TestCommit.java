@@ -22,20 +22,26 @@ public class TestCommit extends Test {
 		String txnId = client.startTransaction();
 		
 		TimestampType now = new TimestampType(Calendar.getInstance().getTime());
-		client.insert(txnId, "USER_USAGE", 2, 3, 4, 200, now);
+		client.insert("USER_USAGE", 2, 3, 4, 200, now);
 		assertRowExists(client.client.callProcedureSync("undo_log.select", txnId, now));
 		
 		now = new TimestampType(Calendar.getInstance().getTime());
-		client.insert(txnId, "USER", 1, "luke", now);
+		client.insert("USER", 1, "luke", now);
 		assertRowExists(client.client.callProcedureSync("undo_log.select", txnId, now));
+		
+		client.delete("USER", 1);
+		assertRowsDontExist(client.client.callProcedureSync("@AdHoc", "select * from user where id = 1"));
 		
 		client.commit();
 		assertRowsDontExist(client.client.callProcedureSync("@AdHoc", "select * from undo_log where txn_id = '" + txnId + "'"));
 		assertRowExists(client.client.callProcedureSync("@AdHoc", "select * from user_usage where user_id = 2"));
-		assertRowExists(client.client.callProcedureSync("@AdHoc", "select * from user where id = 1"));
+		assertRowsDontExist(client.client.callProcedureSync("@AdHoc", "select * from user where id = 1"));
 		
-		client.delete(txnId, "USER", 1);
+		client.delete("USER", 1);
+		
 	}
 	
-
+	private void setUp(TransactionalClient client) {
+		
+	}
 }

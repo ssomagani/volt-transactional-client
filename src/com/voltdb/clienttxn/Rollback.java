@@ -6,10 +6,12 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectInputStream;
+import java.util.Arrays;
 
 import org.voltdb.VoltCompoundProcedure;
 import org.voltdb.VoltTable;
 import org.voltdb.client.ClientResponse;
+import org.voltdb.types.TimestampType;
 
 public class Rollback extends VoltCompoundProcedure {
 
@@ -49,6 +51,11 @@ public class Rollback extends VoltCompoundProcedure {
 		ByteArrayInputStream bis = new ByteArrayInputStream(undoArgsByteArray);
 		ObjectInput in = new ObjectInputStream(bis);
 		Object[] deserArgs = (Object[]) in.readObject();
+		for(int i=0; i<deserArgs.length; i++) {
+			if(deserArgs[i] instanceof java.util.Date) {
+				deserArgs[i] = new TimestampType((java.util.Date)deserArgs[i]);
+			}
+		}
 		
 		queueProcedureCall(undoProc, deserArgs);
 	}

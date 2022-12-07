@@ -38,7 +38,6 @@ public class TransactionalClient {
 	}
 
 	public ClientResponse update(
-			String txnId,
 			String table,
 			String updateProc,
 			VoltTable whereClauseArgs,
@@ -57,12 +56,13 @@ public class TransactionalClient {
 	}
 
 	public ClientResponse insert(
-			String txnId,
 			String tableName,
 			Object... insertArgs
 			) throws IOException, ProcCallException, RuntimeException {
 
 		ClientVoltTable table = schema.getTable(tableName);
+		if(table == null)
+			throw new RuntimeException("Schema for table " + tableName + " not found on the client.");
 		VoltTable insertArgTable = table.getInsertArgsTable(insertArgs);
 		VoltTable undoArgTable = table.getLoadedPrimaryKeyTable(insertArgTable);
 
@@ -77,7 +77,6 @@ public class TransactionalClient {
 	}
 
 	public ClientResponse delete(
-			String txnId,
 			String tableName,
 			Object... args
 			) throws IOException, ProcCallException {
@@ -96,7 +95,6 @@ public class TransactionalClient {
 	}
 
 	public ClientResponse deleteWhere(
-			String txnId,
 			String table,
 			VoltTable whereClauseArgs,
 			VoltTable procArgs) throws IOException, ProcCallException {
@@ -112,7 +110,6 @@ public class TransactionalClient {
 	}
 
 	public ClientResponse callProcedureSync(
-			String txnId, 
 			String getUndoValsProc, 
 			String insertUndoLogProc, 
 			String undoStoredProc, 
