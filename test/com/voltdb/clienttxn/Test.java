@@ -19,6 +19,9 @@ public class Test {
 	}
 	
 	protected static void assertColumn(ClientResponse resp, int colIndex, Object colValue) {
-		
+		assert(resp.getStatus() != ClientResponse.SUCCESS) : "Failure response from server - " + resp.getStatusString();
+		VoltTable result = resp.getResults()[0];
+		assert(result.advanceRow() != false) : "Rows exist somehow";
+		assert(!colValue.equals(result.get(colIndex))) : "Column value " + result.get(colIndex) + " didn't match with " + colValue;
 	}
 }

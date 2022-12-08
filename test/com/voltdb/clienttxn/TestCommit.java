@@ -19,6 +19,8 @@ public class TestCommit extends Test {
 		TransactionalClient client = new TransactionalClient(new Client2Config());
 		client.connect("localhost");
 		
+		setUp(client);
+		
 		String txnId = client.startTransaction();
 		
 		TimestampType now = new TimestampType(Calendar.getInstance().getTime());
@@ -28,6 +30,10 @@ public class TestCommit extends Test {
 		now = new TimestampType(Calendar.getInstance().getTime());
 		client.insert("USER", 1, "luke", now);
 		assertRowExists(client.client.callProcedureSync("undo_log.select", txnId, now));
+		
+		now = new TimestampType(Calendar.getInstance().getTime());
+		client.update("USER", 1, "Leia", now);
+		assertColumn(client.client.callProcedureSync("@AdHoc", "select * from user where id = 1"), 1, "Leia");
 		
 		client.delete("USER", 1);
 		assertRowsDontExist(client.client.callProcedureSync("@AdHoc", "select * from user where id = 1"));
@@ -41,7 +47,7 @@ public class TestCommit extends Test {
 		
 	}
 	
-	private void setUp(TransactionalClient client) {
+	private static void setUp(TransactionalClient client) {
 		
 	}
 }

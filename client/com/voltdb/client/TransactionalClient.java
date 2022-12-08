@@ -34,25 +34,28 @@ public class TransactionalClient {
 	public ClientResponse select(String selectProc, VoltTable procArgs) throws IOException, ProcCallException {
 		if(procArgs.advanceRow())
 			return client.callProcedureSync(selectProc, procArgs.getRowObjects());
-		return null;
+		else
+			return client.callProcedureSync(selectProc);
 	}
 
 	public ClientResponse update(
-			String table,
-			String updateProc,
-			VoltTable whereClauseArgs,
-			VoltTable procArgs
+			String tableName,
+			Object... insertArgs
 			) throws IOException, ProcCallException {
-		Object[] allArgs = new Object[7];
+		ClientVoltTable table = schema.getTable(tableName);
+		if(table == null)
+			throw new RuntimeException("Schema for table " + tableName + " not found on the client.");
+		VoltTable updateArgTable = table.getUpdateArgsTable(insertArgs);
+		VoltTable undoArgTable = table.getLoadedPrimaryKeyTable(updateArgTable);
+		
+		Object[] allArgs = new Object[5];
 		allArgs[0] = txnId;
-		allArgs[1] = "insert_undo_" + table;
-		allArgs[2] = table + "_select_by_id";
-		allArgs[3] = updateProc;
-		allArgs[4] = updateProc;
-		allArgs[5] = whereClauseArgs;
-		allArgs[6] = procArgs;
-		ClientResponse resp = client.callProcedureSync("RollbackableTxn", allArgs);
-		return resp;
+		allArgs[1] = tableName.toUpperCase() + ".select";
+		allArgs[2] = tableName.toUpperCase() + ".update";
+		allArgs[3] = undoArgTable;
+		allArgs[4] = updateArgTable;
+		
+		return client.callProcedureSync("Update", allArgs);
 	}
 
 	public ClientResponse insert(

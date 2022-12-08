@@ -59,6 +59,10 @@ public class Utils {
 		}
 	}
 	
+	public static void applyToResults(ClientResponse[] resp, Consumer<VoltTable> resultFn) {
+		applyToResults(resp, 0, resultFn);
+	}
+	
 	public static void applyToResults(ClientResponse[] resp, int resultIndex, Consumer<VoltTable> resultFn) {
 		if(resp[0].getStatus() != ClientResponse.SUCCESS) {
 			throwException(resp[0].getStatusString());

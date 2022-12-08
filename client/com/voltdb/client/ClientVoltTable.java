@@ -16,6 +16,7 @@ public class ClientVoltTable {
 //	private final String insertProc, deleteProc;
 	private VoltTable insertColsTable;
 	private VoltTable primaryColsTable;
+	private VoltTable updateColsTable;
 
 	public ClientVoltTable(String name) {
 		this.name = name;
@@ -41,6 +42,14 @@ public class ClientVoltTable {
 	
 	public void setPrimaryCols(VoltTable primaryColsTable) {
 		this.primaryColsTable = primaryColsTable;
+	}
+	
+	public void setUpdateColsTable(VoltTable updateColsTable) {
+		this.updateColsTable = updateColsTable;
+	}
+	
+	public VoltTable getUpdateColsTable() {
+		return updateColsTable;
 	}
 	
 	public VoltTable getInsertArgsTable(Object[] args) {
@@ -70,5 +79,16 @@ public class ClientVoltTable {
 	
 	public VoltTable getPrimaryKeyTable() {
 		return primaryColsTable.clone(0);
+	}
+
+	public VoltTable getUpdateArgsTable(Object[] insertArgs) {
+		Object[] updateArgs = new Object[insertArgs.length + primaryKeyIndices.size()];
+		System.arraycopy(insertArgs, 0, updateArgs, 0, insertArgs.length);
+		for(int i = 0; i<primaryKeyIndices.size(); i++) {
+			updateArgs[insertArgs.length + i] = insertArgs[primaryKeyIndices.get(i)];
+		}
+		VoltTable table = updateColsTable.clone(0);
+		table.addRow(updateArgs);
+		return table;
 	}
 }

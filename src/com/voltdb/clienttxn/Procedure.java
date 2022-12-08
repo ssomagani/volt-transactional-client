@@ -20,7 +20,6 @@ public class Procedure extends Rollbackable {
 
 		this.txnId = txnId;
 		this.getUndoValsProc = getUndoValsProc;
-		this.insertUndoLogProc = insertUndoLogProc;
 		this.undoProc = undoProc;
 		this.getUndoValsProcArgs = getUndoValsProcArgs;
 		this.theProc = theProc;

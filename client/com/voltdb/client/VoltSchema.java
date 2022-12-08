@@ -111,6 +111,14 @@ public class VoltSchema {
 				VoltTable primaryColsTable = new VoltTable(ColumnWithPosition.convertToColumnInfo(sortedProcCols));
 				tables.get(tableName).setPrimaryCols(primaryColsTable);
 			}
+			
+			String updateProc = tableName.toUpperCase() + ".update";
+			if(procedures.containsKey(updateProc)) {
+				ArrayList<ColumnWithPosition> sortedProcCols = (ArrayList<ColumnWithPosition>)procedures.get(updateProc).clone();
+				Collections.sort(sortedProcCols);
+				VoltTable updateColsTable = new VoltTable(ColumnWithPosition.convertToColumnInfo(sortedProcCols));
+				tables.get(tableName).setUpdateColsTable(updateColsTable);
+			}
 		});
 	}
 	

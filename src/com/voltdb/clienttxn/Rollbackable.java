@@ -15,10 +15,9 @@ import org.voltdb.types.TimestampType;
 
 public abstract class Rollbackable extends VoltCompoundProcedure {
 
-	protected String insertUndoLogProc;		// insert_undo_table
-	protected String undoProc;				// delete if insert, insert if delete, or update
-	protected String getUndoValsProc;		// table_select_by_id
-	protected String theProc;				// table_insert/table_update/table_delete...
+	protected String undoProc;				// delete if insert, insert if delete, or update if update
+	protected String getUndoValsProc;		// table.select
+	protected String theProc;				// table.insert/table.update/table.delete...
 	protected String txnId;
 
 	protected VoltTable procArgs, getUndoValsProcArgs;
